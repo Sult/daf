@@ -13,7 +13,7 @@ images: https://developers.eveonline.com/resource/image-export-collection
 Static database
 sudo - postgres
 createdb static
-#create user named eve (this is needed for this dump)
+####create user named eve (this is needed for this dump)
 createuser -P
 psql grant all privileges on database static to eve;
 pg_restore -d static /path/to/dump/file
@@ -27,9 +27,13 @@ Feel free to name them differently, just dont forget to adjust the config/settin
 
 
 Migrating databases:
+
 ./manage.py migrate
+
 ./manage.py migrate --database=bulk
+
 ./manage.py migrate --database=static
+
 
 
 
