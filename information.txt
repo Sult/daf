@@ -20,7 +20,7 @@ http://wiki.eve-id.net/APIv2_Page_Index
 
 Create postgress database from dump
 sudo - postgres
-createdb daf_static
+createdb static
 createuser -P
 psql grant all privileges on database static to eve;
 pg_restore -d static /path/to/file

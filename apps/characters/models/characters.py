@@ -238,4 +238,3 @@ class CharacterJournal(Transaction):
 
     def __unicode__(self):
         return "%s's transaction" % self.characterapi.charactername
-
