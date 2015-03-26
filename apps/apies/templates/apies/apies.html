@@ -6,6 +6,7 @@
 
 {% block content %}
 <div class="row">
+    {% if char_apies or corp_apies %}
     <div class="col-md-8">
         <h2 class="page-header">Manage APIs</h2>
         <br>
@@ -17,15 +18,19 @@
         <h4>Corporations</h4>
         {% include "apies/apies_table.html" with apies=corp_apies %}
     {% endif %}
-    {% if not corp_apies and not char_apies %}
-        <p>
-            You have currently no APIs added.
-        </p>
-    {% endif %}
-        <a href="#" class="btn btn-primary btn-md" role="button" data-toggle="modal" data-target="#ApiModal">Add API</a>
     </div>
-    <div class="col-md-4">
+    {% endif %}
 
+    {% if not corp_apies and not char_apies %}
+    <div class="col-md-4">
+        <h2 class="page-header">Add API</h2>
+    {% else %}
+    <div class="col-md-4 v-offset-top-6">
+    {% endif %}
+        <p>
+            <strong>Information</strong>
+        </p>
+        <a href="#" class="btn btn-primary btn-md" role="button" data-toggle="modal" data-target="#ApiModal">Add API</a>
     </div>
 </div>
 

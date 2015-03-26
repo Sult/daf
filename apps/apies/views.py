@@ -16,21 +16,19 @@ def clear_character_session(request):
 
 @login_required
 def apies(request):
-    api_form = ApiForm(request.POST or None)
+    api_form = ApiForm(request.POST or None, user=request.user)
 
     if request.POST and api_form.is_valid():
         api_form.save(request.user)
-        api_form = ApiForm()
+        api_form = ApiForm(user=request.user)
 
     char_apies = Api.objects.filter(
         user=request.user,
         accounttype__in=[Api.CHARACTER, Api.ACCOUNT],
-        active=True
     )
     corp_apies = Api.objects.filter(
         user=request.user,
         accounttype=Api.CORPORATION,
-        active=True
     )
     return render(
         request,

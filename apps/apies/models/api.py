@@ -21,7 +21,6 @@ class Api(models.Model):
         (CORPORATION, "Corporation"),
     )
 
-    active = models.BooleanField(default=True)
     user = models.ForeignKey(User)
     key = models.IntegerField(verbose_name="Key ID")
     vcode = models.CharField(max_length=254, verbose_name="Verification Code")

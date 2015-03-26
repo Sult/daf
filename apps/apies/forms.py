@@ -10,12 +10,18 @@ from utils.common import convert_timestamp
 
 
 class ApiForm(forms.Form):
+
     key_ID = forms.CharField(min_length=7, max_length=7, required=True)
     verification_code = forms.CharField(
         min_length=64,
         max_length=64,
         required=True
     )
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user")
+        super(ApiForm, self).__init__(*args, **kwargs)
+
 
     def clean_key_ID(self):
         data = self.cleaned_data['key_ID']
@@ -37,10 +43,10 @@ class ApiForm(forms.Form):
         key = self.cleaned_data['key_ID']
         vcode = self.cleaned_data['verification_code']
 
-        # if Api.objects.filter(key=key, vcode=vcode, active=True).exists():
-        #     raise forms.ValidationError(
-        #         "This key has already been entered, try to update it"
-        #     )
+        if Api.objects.filter(key=key, vcode=vcode, user=self.user).exists():
+            raise forms.ValidationError(
+                "This key has already been entered, try to update it"
+            )
 
         #connect with api and validate key
         api = api_connect()
