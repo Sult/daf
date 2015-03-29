@@ -153,20 +153,45 @@ class CharacterApi(models.Model):
             total += int(skill.endSP - skill.startSP)
         return total
 
-    #walletjournal (results can be increased and filtered)
+    #walletjournal
     def wallet_journal(self):
-        cache_key = "walletjournal_%d" % self.pk
+        cache_key = "walletjournal_character_%d" % self.pk
         result = utils.connection.get_cache(cache_key)
         if not result:
-            cache_timer = 60 * 5
-            transactions = utils.connection.api_request(
-                "WalletJournal", obj=self
-            ).transactions
-            result = list()
-            for transaction in transactions:
-                result.append(transaction)
-            utils.connection.set_cache(cache_key, result, cache_timer)
-        return result
+            self.update_journal()
+            cache_timer = 60 * 10
+            utils.connection.set_cache(cache_key, True, cache_timer)
+        return CharacterJournal.objects.filter(
+            characterapi=self).order_by("-date")
+
+    #updates journal to current moment
+    def update_journal(self):
+        fromid = 0
+        transactions = utils.connection.api_request(
+            "WalletJournal", obj=self, rowcount=2500
+        ).transactions
+
+        while True:
+            for trans in transactions:
+                date = utils.common.convert_timestamp(trans.date)
+                #check for duplicate
+                if CharacterJournal.objects.filter(
+                    characterapi=self,
+                    balance=trans.balance,
+                    date=date,
+                ).exists():
+                    continue
+                else:
+                    CharacterJournal.create_entry(self, trans)
+
+                    if int(trans.refID) < fromid or fromid == 0:
+                        fromid = int(trans.refID)
+            if len(transactions) < 2500:
+                break
+            else:
+                transactions = utils.connection.api_request(
+                    "WalletJournal", obj=self, rowcount=2500, fromid=fromid
+                ).transactions
 
 
 class CharacterApiIcon(models.Model):
@@ -212,10 +237,10 @@ class Transaction(models.Model):
     ownerid2 = models.IntegerField()
     argname1 = models.CharField(max_length=254)
     argid1 = models.IntegerField()
-    amount = models.DecimalField(max_digits=19, decimal_places=2)
+    amount = models.FloatField(null=True)
     reason = models.TextField(blank=True)
     taxreceiverid = models.IntegerField(null=True)
-    taxamount = models.DecimalField(max_digits=19, decimal_places=2, null=True)
+    taxamount = models.FloatField(null=True)
 
     class Meta:
         abstract = True
@@ -229,12 +254,41 @@ class CharacterJournal(Transaction):
     """
 
     characterapi = models.ForeignKey(CharacterApi)
-    refid = models.BigIntegerField()
     date = models.DateTimeField()
-    balance = models.DecimalField(max_digits=19, decimal_places=2)
+    balance = models.FloatField()
 
     class Meta:
         unique_together = ["characterapi", "date", "balance"]
 
     def __unicode__(self):
         return "%s's transaction" % self.characterapi.charactername
+
+    @staticmethod
+    def create_entry(characterapi, transaction):
+        if transaction.taxReceiverID == "":
+            taxreceiverid = None
+        else:
+            taxreceiverid = int(transaction.taxReceiverID)
+
+        if transaction.taxAmount == "":
+            taxamount = None
+        else:
+            taxamount = round(float(transaction.taxAmount), 2)
+
+        date = utils.common.convert_timestamp(transaction.date)
+        CharacterJournal.objects.create(
+            characterapi=characterapi,
+            date=date,
+            balance=round(float(transaction.balance), 2),
+            reftypeid=int(transaction.refTypeID),
+            ownername1=str(transaction.ownerName1),
+            ownerid1=int(transaction.ownerID1),
+            ownername2=str(transaction.ownerName2),
+            ownerid2=int(transaction.ownerID2),
+            argname1=str(transaction.argName1),
+            argid1=int(transaction.argID1),
+            amount=round(float(transaction.amount), 2),
+            reason=str(transaction.reason),
+            taxreceiverid=taxreceiverid,
+            taxamount=taxamount,
+        )

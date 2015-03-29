@@ -25,18 +25,20 @@ def set_cache(key, data, timeout):
 
 
 # generate cachkey for
-def generate_cache_key(key, api, obj):
+def generate_cache_key(key, api, obj, **kwargs):
     cache_key = key
     if api:
         cache_key += "_%d" % api.pk
     if obj:
         cache_key += "_%d" % obj.pk
+    for key, value in kwargs.iteritems():
+        cache_key += "_%s_%s" % (key, value)
     return cache_key
 
 
 #get data from api. obj should only be CharacterApi and CorporationApi objects.
 def api_request(key, api=None, obj=None, **kwargs):
-    cache_key = generate_cache_key(key, api, obj)
+    cache_key = generate_cache_key(key, api, obj, **kwargs)
     result = get_cache(cache_key)
     if not result:
         temp = api_request.dict[key]
