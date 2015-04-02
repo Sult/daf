@@ -10,5 +10,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         #update all characters with weekly cronjob
         for character in CharacterApi.objects.all():
-            character.update_journal()
-            time.sleep(3)
+            if character.api.access_to("WalletJournal"):
+                character.update_journal()
+                time.sleep(3)

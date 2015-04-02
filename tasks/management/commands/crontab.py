@@ -22,7 +22,7 @@ class Command(BaseCommand):
 
         #add regular wallet updates
         cron = "@weekly"
-        task = "update_wallet"
+        task = "update_wallets"
         self.stdout.write("%s %s %s %s" % (cron, venv_path, task_path, task))
 
         # update alliances

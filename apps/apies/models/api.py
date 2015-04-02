@@ -35,16 +35,11 @@ class Api(models.Model):
     def update(self):
         #update api fields
         info = utils.connection.api_request("ApiKeyInfo", api=self)
-        self.accounttype = str(info.key.type)
         self.expires = convert_timestamp(info.key.expires)
         self.accessmask = int(info.key.accessMask)
         self.save()
 
-        #delete and recreate related character/corp models
-        #TODO: instead of recreating, update the characters still
-        # available in api
-        self.delete_related()
-        self.create_related()
+
 
     #delete related api models
     def delete_related(self):

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.utils.timezone import utc
@@ -29,3 +29,12 @@ def icon_size_name(size):
     for s in settings.IMAGE_SIZES:
         if s[1] == size:
             return s[0]
+
+
+#get the last restart datetime for eve server
+def last_server_restart():
+    now = datetime.now().replace(tzinfo=utc)
+    if now.hour < 12:
+        now = now - timedelta(days=1)
+    restart = now.replace(hour=12, minute=0, second=0, microsecond=0)
+    return restart

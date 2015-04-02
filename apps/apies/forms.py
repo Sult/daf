@@ -15,7 +15,7 @@ class ApiForm(forms.Form):
     verification_code = forms.CharField(
         min_length=64,
         max_length=64,
-        required=True
+        required=True,
     )
 
     def __init__(self, *args, **kwargs):

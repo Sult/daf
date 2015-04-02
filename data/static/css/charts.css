@@ -1,0 +1,16 @@
+.highcharts-tooltip span {
+    background-color:white;
+    border:1px solid black;
+    border-radius: 6px;
+    padding: 5px;
+    opacity:1;
+    z-index:9999!important;
+}
+
+.label {
+ z-index: 1!important;
+}
+
+.tooltip {
+    padding: 5px;
+}

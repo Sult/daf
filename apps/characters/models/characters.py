@@ -1,3 +1,4 @@
+import time
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
@@ -8,9 +9,8 @@ from django.utils.timezone import utc
 from .skills import Skill, SkillGroup
 from apps.bulk.models import Corporation
 from config.storage import OverwriteStorage
-#from utils import connection
+
 import utils
-from utils.common import convert_timestamp, icon_size_name, lookahead
 
 
 class CharacterApi(models.Model):
@@ -41,9 +41,22 @@ class CharacterApi(models.Model):
         except CharacterApiIcon.DoesNotExist:
             return None
 
+    def current_balance(self):
+        if self.api.access_to("CharacterInfo"):
+            sheet = utils.connection.api_request(
+                "CharacterInfoAuth", obj=self
+            )
+            if sheet.accountBalance:
+                return round(float(sheet.accountBalance), 2)
+        return 0
+
     #get the data for landing page after character selection
     def character_sheet(self):
-        sheet = utils.connection.api_request("CharacterInfoAuth", obj=self)
+        if self.api.access_to("CharacterInfo"):
+            sheet = utils.connection.api_request("CharacterInfoAuth", obj=self)
+        else:
+            sheet = utils.connection.api_request("CharacterInfo", obj=self)
+
         employment = self.employment_history(sheet)
         return sheet, employment
 
@@ -51,7 +64,8 @@ class CharacterApi(models.Model):
     @staticmethod
     def employment_history(sheet):
         cache_key = "employment_history_%d" % int(sheet.characterID)
-        result = utils.connection.get_cache(cache_key)
+        #result = utils.connection.get_cache(cache_key)
+        result = None
         if not result:
             cache_timer = 60 * 60
             result = []
@@ -60,7 +74,7 @@ class CharacterApi(models.Model):
                     "corporation": Corporation.find_corporation(
                         corp_data.corporationID
                     ),
-                    "startdate": convert_timestamp(
+                    "startdate": utils.common.convert_timestamp(
                         corp_data.startDate
                     )
                 })
@@ -80,7 +94,7 @@ class CharacterApi(models.Model):
                         typeid=int(in_training.trainingTypeID)
                     ).typename,
                     "to_level": int(in_training.trainingToLevel),
-                    "finnished": convert_timestamp(
+                    "finnished": utils.common.convert_timestamp(
                         in_training.trainingEndTime
                     )
                 }
@@ -138,7 +152,7 @@ class CharacterApi(models.Model):
             queue["skills"] = skills
             queue["total"] = self.total_skillpoints(skills)
             now = datetime.now().replace(tzinfo=utc)
-            trainingtime = convert_timestamp(
+            trainingtime = utils.common.convert_timestamp(
                 skills[-1].endTime
             ) - now
             trainingtime -= timedelta(microseconds=trainingtime.microseconds)
@@ -161,8 +175,7 @@ class CharacterApi(models.Model):
             self.update_journal()
             cache_timer = 60 * 10
             utils.connection.set_cache(cache_key, True, cache_timer)
-        return CharacterJournal.objects.filter(
-            characterapi=self).order_by("-date")
+        return CharacterJournal.objects.filter(characterapi=self)
 
     #updates journal to current moment
     def update_journal(self):
@@ -189,6 +202,7 @@ class CharacterApi(models.Model):
             if len(transactions) < 2500:
                 break
             else:
+                time.sleep(1)
                 transactions = utils.connection.api_request(
                     "WalletJournal", obj=self, rowcount=2500, fromid=fromid
                 ).transactions
@@ -211,7 +225,7 @@ class CharacterApiIcon(models.Model):
         unique_together = ["size", "relation"]
 
     def __unicode__(self):
-        return "Character Image %s" % icon_size_name(self.size)
+        return "Character Image %s" % self.relation.charactername
 
     # def save(self, *args, **kwargs):
     #     try:
@@ -259,6 +273,7 @@ class CharacterJournal(Transaction):
 
     class Meta:
         unique_together = ["characterapi", "date", "balance"]
+        ordering = ["-date"]
 
     def __unicode__(self):
         return "%s's transaction" % self.characterapi.charactername
@@ -292,3 +307,74 @@ class CharacterJournal(Transaction):
             taxreceiverid=taxreceiverid,
             taxamount=taxamount,
         )
+
+    @staticmethod
+    def monthly_balance(characterapi):
+        last_restart = utils.common.last_server_restart()
+        days = last_restart - timedelta(days=31)
+        entries = CharacterJournal.objects.filter(
+            characterapi=characterapi,
+            date__range=[days, last_restart]
+        )
+
+        balance = []
+        for days in range(31):
+            first = entries.first()
+            date = (last_restart - timedelta(days=days))
+            #make timestamp in miliseconds
+            timestamp = int(time.mktime(date.timetuple()) * 1000)
+            if first:
+                isk = first.balance
+            else:
+                try:
+                    isk = balance[-1][1]
+                except IndexError:
+                    isk = characterapi.current_balance()
+
+            balance.append([timestamp, isk])
+            entries = entries.filter(date__lt=(date - timedelta(days=1)))
+        #return reversed list
+        return balance[::-1]
+
+    @staticmethod
+    def weekly_balance(characterapi):
+        now = datetime.now().replace(tzinfo=utc)
+        entries = CharacterJournal.objects.filter(
+            characterapi=characterapi,
+            date__range=[
+                now.replace(hour=23, minute=59, second=0) - timedelta(days=9),
+                now
+            ]
+        )
+
+        balance = []
+        for days in range(8):
+            date = now.replace(
+                hour=0, minute=0, second=0
+            ) - timedelta(days=days)
+
+            day_entries = entries.filter(
+                date__lt=now.replace(
+                    hour=23, minute=59, second=59
+                ) - timedelta(days=days),
+                date__gt=date
+            )
+            if not day_entries.count() > 0:
+                try:
+                    isk = balance[-1][1]
+                except IndexError:
+                    isk = characterapi.current_balance()
+                timestamp = int(time.mktime(date.timetuple()) * 1000)
+                balance.append([timestamp, isk])
+
+            else:
+                for entry in day_entries:
+                    timestamp = int(time.mktime(entry.date.timetuple()) * 1000)
+                    balance.append([timestamp, entry.balance])
+
+        #add last value for date on xaxis
+        date = now.replace(hour=23, minute=59, second=59) - timedelta(days=8)
+        isk = balance[-1][1]
+        timestamp = int(time.mktime(date.timetuple()) * 1000)
+        balance.append([timestamp, isk])
+        return balance[::-1]

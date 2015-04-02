@@ -5,17 +5,19 @@ from django.core.urlresolvers import reverse
 
 from pure_pagination import Paginator, EmptyPage, PageNotAnInteger
 
+from .decorators import valid_character_selected
+from .forms import FilterJournalForm
 from apps.apies.forms import ApiForm
-from apps.characters.models import CharacterApi
+from apps.characters.models import CharacterApi, CharacterJournal
 
 
 @login_required
 def characters(request):
-    api_form = ApiForm(request.POST or None)
+    api_form = ApiForm(request.POST or None, user=request.user)
 
     if request.POST and api_form.is_valid():
         api_form.save(request.user)
-        api_form = ApiForm()
+        api_form = ApiForm(user=request.user)
 
     characters = CharacterApi.objects.filter(api__user=request.user)
     if request.user.groups.filter(
@@ -63,10 +65,9 @@ def select_character(request, pk):
 
 
 @login_required
+@valid_character_selected
 def character_sheet(request):
     character = get_object_or_404(CharacterApi, pk=request.session['charpk'])
-    if not character.api.access_to("CharacterInfo"):
-        return HttpResponseRedirect(reverse("characters"))
 
     sheet, employment = character.character_sheet()
     account = character.api.account_status()
@@ -86,6 +87,7 @@ def character_sheet(request):
 
 
 @login_required
+@valid_character_selected
 def character_skills(request):
     character = get_object_or_404(CharacterApi, pk=request.session['charpk'])
     if not character.api.access_to("CharacterSheet"):
@@ -104,12 +106,16 @@ def character_skills(request):
 
 
 @login_required
+@valid_character_selected
 def character_journal(request):
     character = get_object_or_404(CharacterApi, pk=request.session['charpk'])
     if not character.api.access_to("WalletJournal"):
         return HttpResponseRedirect(reverse("characters"))
 
     all_transactions = character.wallet_journal()
+    filter_form = FilterJournalForm(
+        request.POST or None, characterapi=character
+    )
 
     paginator = Paginator(
         all_transactions,
@@ -123,11 +129,15 @@ def character_journal(request):
     except EmptyPage:
         transactions = paginator.page(paginator.num_pages)
 
+    chart_list = CharacterJournal.monthly_balance(character)
+
     return render(
         request,
         "characters/wallet_journal.html",
         {
             "character": character,
             "transactions": transactions,
+            "chart_list": chart_list,
+            "filter_form": filter_form,
         }
     )

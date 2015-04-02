@@ -47,6 +47,8 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 
 ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
+#SESSION_COOKIE_SECURE = True
+#CSRF_COOKIE_SECURE = True
 
 
 # Database
@@ -96,7 +98,7 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_L10N = True
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -131,6 +133,7 @@ INSTALLED_APPS = (
     'apps.apies',
     'apps.characters',
     'apps.corporations',
+    'apps.charts',
     'apps.static',
     'apps.blog',
     'apps.admin',

@@ -1,11 +1,12 @@
 from datetime import datetime
-from collections import namedtuple
 
 from django.db import models
 from django.utils.timezone import utc
 
 #from utils import connection
 from apps.static.models import Crpnpccorporations, Invnames
+
+import utils
 
 
 class Corporation(models.Model):
@@ -55,24 +56,26 @@ class Corporation(models.Model):
     #create a corp if corporationid does not exist yet
     @staticmethod
     def create_corporation(corp_id):
-        return ""
-        corp_data = utils.connection.api_request("CorporationSheet")
-        try:
-            if int(corp_data.allianceID) == 0:
-                allianceid = None
-                alliancename = ""
-            else:
-                allianceid = int(corp_data.allianceID)
-                alliancename = str(corp_data.allianceName)
+        corp_data = utils.connection.api_request(
+            "CorporationSheet", corporationid=corp_id
+        )
 
+        if corp_data.allianceID:
+            allianceid = int(corp_data.allianceID)
+            alliancename = str(corp_data.allianceName)
+        else:
+            allianceid = None
+            alliancename = ""
+
+        try:
             corp = Corporation.objects.create(
                 corporationid=int(corp_data.corporationID),
                 corporationname=str(corp_data.corporationName),
                 ticker=str(corp_data.ticker),
                 ceoid=int(corp_data.ceoID),
                 ceoname=str(corp_data.ceoName),
-                allianceid=int(allianceid),
-                alliancename=str(alliancename),
+                allianceid=allianceid,
+                alliancename=alliancename,
                 stationid=int(corp_data.stationID),
                 description=unicode(corp_data.description),
                 url=str(corp_data.url),
@@ -83,4 +86,4 @@ class Corporation(models.Model):
         except Exception, e:
             print "Error: %s. On Corporation.create_corporation with id %d" \
                 % (e, corp_id)
-            return Corporation()
+            return Corporation(corporationname="Unknown")

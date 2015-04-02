@@ -11,6 +11,7 @@ urlpatterns = patterns('',
     url(r'^', include('apps.static.urls')),
     url(r'^', include('apps.blog.urls')),
     url(r'^', include('apps.admin.urls')),
-    
+
+    url(r'^charts/', include('apps.charts.urls')),
     url(r'^froala_editor/', include('froala_editor.urls')),
 ) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

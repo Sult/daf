@@ -115,7 +115,7 @@ def callendareventattendees(api=None, obj=None, **kwargs):
 
 def characterinfo(api=None, obj=None, **kwargs):
     api = api_connect()
-    return api.eve.CharacterInfo(characterID=obj.characterid)
+    return api.eve.CharacterInfo(characterID=kwargs['characterid'])
 
 
 def characterinfoauth(api=None, obj=None, **kwargs):
@@ -157,8 +157,12 @@ def contracts(api=None, obj=None, **kwargs):
 
 
 def corporationsheet(api=None, obj=None, **kwargs):
-    api = api_connect()
-    return api.eve.CorporationSheet(corporationID=obj.corporationid)
+    if obj:
+        auth = auth_connect(obj.api)
+        return auth.corp.CorporationSheet(corporationID=obj.corporationid)
+    else:
+        api = api_connect()
+        return api.corp.CorporationSheet(corporationID=kwargs['corporationid'])
 
 
 def corporationsheetauth(api=None, obj=None, **kwargs):

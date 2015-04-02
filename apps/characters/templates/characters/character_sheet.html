@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-8">
         <h2 class="page-header">{{ character.charactername }}</h2>
 
         <div style="position:relative; padding-left: 210px;">
@@ -24,10 +24,12 @@
                     <td>Corporation</td>
                     <td>{{ sheet.corporation }}</td>
                 </tr>
+                {% if sheet.alliance %}
                 <tr>
                     <td>Alliance</td>
                     <td>{{ sheet.alliance }}</td>
                 </tr>
+                {% endif %}
                 <tr>
                     <td>Balance</td>
                     <td class="text-success">{{ sheet.accountBalance|intcomma }} ISK</td>
@@ -67,7 +69,7 @@
                 {# colapsable implants #}
                 <tr class="accordion-toggle" data-toggle="collapse" data-target="#history">
                     <td colspan="2" class="pointer">
-                        Employment History
+                        <i class="fa fa-caret-down"></i>&nbsp;&nbsp;Employment History
                     </td>
                 </tr>
                 <tr>
